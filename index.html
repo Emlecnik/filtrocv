@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FiltroCV · Creá y analizá tu CV para sistemas ATS</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23ff6a00%22/><text x=%2250%22 y=%2272%22 font-size=%2260%22 font-weight=%22800%22 text-anchor=%22middle%22 fill=%22%23000%22>CV</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.0/docx.min.js"></script>
+<style>
+:root{--o:#ff6a00;--o2:#ff8a33;--bg:#000;--s:#151515;--b:#2c2c2c;--t:#f4f4f4;--m:#9b9b9b;--ok:#3ecf6e;--w:#ffb020;--bad:#ff4d4d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font:16px/1.55 'Instrument Sans',system-ui,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 20px 14px;border-bottom:2px solid var(--o)}
+.logo{font:800 22px 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}.logo i{color:var(--o);font-style:normal}
+#who{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--m);min-width:0}#who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:920px;margin:0 auto;padding:28px 20px 90px}
+h1{font:800 clamp(30px,6vw,52px)/1.05 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em;margin:8px 0 14px}
+h2,h3{font-family:'Bricolage Grotesque',sans-serif;margin:0 0 8px}h3{color:var(--o)}
+.sec{margin-top:36px}.lead,.muted,small{color:var(--m)}.lead{font-size:18px;max-width:560px}
+.card{background:var(--s);border:1px solid var(--b);border-radius:14px;padding:20px;margin:16px 0}
+label{display:block;margin:14px 0;font-weight:500}label small{display:block;font-weight:400;margin-top:2px}
+input,textarea{width:100%;background:#000;border:1px solid var(--b);color:var(--t);padding:12px;border-radius:10px;font:inherit;margin-top:6px}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--o);outline-offset:2px}
+.btn{background:var(--o);color:#000;border:0;font:600 16px inherit;font-family:inherit;padding:12px 20px;border-radius:10px;cursor:pointer;width:auto}
+.btn:hover{background:var(--o2)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border:1px solid var(--b);color:var(--t)}.btn.ghost:hover{border-color:var(--o)}
+.btn.white{background:#fff;width:100%}.btn.sm{padding:6px 12px;font-size:14px;margin-left:6px}
+.auth{max-width:480px;margin:0 auto}.auth .btn{width:100%;margin-top:10px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}.tabs button{flex:1;background:#000;border:1px solid var(--b);color:var(--m);padding:10px;border-radius:10px;font:inherit;cursor:pointer}
+.tabs button.on{border-color:var(--o);color:var(--t)}
+.or{text-align:center;color:var(--m);margin:14px 0 0;font-size:14px}.msg{color:var(--o);min-height:1.4em;margin:10px 0 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tile{background:var(--s);border:1px solid var(--b);border-radius:14px;padding:24px;text-align:left;color:var(--t);font:inherit;cursor:pointer}
+.tile:hover{border-color:var(--o)}.tile h2{color:var(--o);font-size:26px}.tile p{margin:0;color:var(--m)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--b)}.row small{display:block}
+.back{background:none;border:0;color:var(--m);font:inherit;cursor:pointer;padding:0}.back:hover{color:var(--o)}
+.drop{border:2px dashed var(--b);border-radius:14px;padding:28px;text-align:center;display:grid;gap:4px;cursor:pointer;margin:0}.drop:hover{border-color:var(--o)}.drop span{color:var(--m);font-weight:400}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.steps span{padding:4px 12px;border-radius:99px;border:1px solid var(--b);font-size:14px;color:var(--m)}
+.steps .on{background:var(--o);border-color:var(--o);color:#000;font-weight:600}.steps .done{color:var(--o);border-color:var(--o)}
+.nav{display:flex;justify-content:space-between;margin-top:8px}
+.tip{border-left:4px solid var(--o);padding:6px 14px;background:#000;border-radius:0 10px 10px 0;margin:0 0 8px;color:var(--m);font-size:15px}
+.item{border:1px solid var(--b);border-radius:12px;padding:4px 16px 14px;margin:14px 0}
+.score{display:flex;gap:22px;align-items:center}
+.ring{--c:var(--o);display:grid;place-content:center;text-align:center;width:112px;height:112px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#2c2c2c 0);position:relative;flex:none}
+.ring::before{content:'';position:absolute;inset:9px;background:var(--s);border-radius:50%}.ring *{position:relative}
+.ring b{font:800 32px/1 'Bricolage Grotesque'}.ring.ok{--c:var(--ok)}.ring.warn{--c:var(--w)}.ring.bad{--c:var(--bad)}
+.chk{border-left:4px solid var(--m);padding-left:12px;margin:14px 0}.chk.warn{border-color:var(--w)}.chk.bad{border-color:var(--bad)}.chk p{margin:2px 0 0;color:var(--m)}
+.err{color:var(--bad)}li{margin:4px 0}summary{cursor:pointer;color:var(--o)}details[open] summary{margin-bottom:8px}
+.paper{background:#fff;color:#111;padding:28px;border-radius:6px;font:13px/1.45 Arial,sans-serif;margin:14px 0;overflow-x:auto}
+.paper h2{margin:0;font:700 24px Arial;color:#000}.paper p{margin:3px 0}.paper .pt{font-size:15px}.paper .pc{color:#444;font-size:12px}
+.paper h4{margin:16px 0 6px;font-size:14px;border-bottom:2px solid var(--o);padding-bottom:2px;color:#000}
+.paper .it{display:flex;justify-content:space-between;gap:10px;margin-top:8px}.paper ul{margin:3px 0;padding-left:18px}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--o);color:#000;font-weight:600;padding:10px 18px;border-radius:99px;display:none;z-index:9}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}.score{flex-direction:column;align-items:flex-start}main{padding-top:20px}}
+</style>
+</head>
+<body>
+<header><div class="logo">Filtro<i>CV</i></div><div id="who"></div></header>
+<main id="app"></main>
+<div id="toast" role="status"></div>
+<script>
+/* ===== CONFIGURACIÓN: pegá acá tus datos de Supabase (ver README) ===== */
+const CFG={SUPABASE_URL:"",SUPABASE_ANON_KEY:""};
+/* ====================================================================== */
+const sb=(CFG.SUPABASE_URL&&window.supabase)?supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
+const $=s=>document.querySelector(s);
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const blank=()=>({name:'',title:'',email:'',phone:'',city:'',linkedin:'',web:'',summary:'',exp:[{role:'',company:'',from:'',to:'',desc:''}],edu:[{title:'',inst:'',from:'',to:''}],skills:'',langs:'',extra:''});
+let user=null,view='home',mode='in',cv=blank(),step=0,msg='',analysisHTML='',savedCache=[];
+
+/* ---------- Almacenamiento (Supabase o modo demo local) ---------- */
+const store={
+ async list(){if(sb){const{data}=await sb.from('cvs').select('*').order('created_at',{ascending:false});return data||[]}return JSON.parse(localStorage.getItem('cvs')||'[]')},
+ async save(c){const title=c.name||'Mi CV';if(sb){await sb.from('cvs').insert({title,data:c})}else{const a=await this.list();a.unshift({id:Date.now(),title,data:c,created_at:new Date().toISOString()});localStorage.setItem('cvs',JSON.stringify(a))}},
+ async del(id){if(sb){await sb.from('cvs').delete().eq('id',id)}else{const a=(await this.list()).filter(r=>String(r.id)!==String(id));localStorage.setItem('cvs',JSON.stringify(a))}}
+};
+
+/* ---------- Sesión ---------- */
+async function init(){
+ if(sb){const{data}=await sb.auth.getSession();user=data.session?.user||null;sb.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;render()})}
+ else if(localStorage.getItem('demo_user'))user={email:'demo@local'};
+ render()}
+function render(){
+ $('#who').innerHTML=user?`<span>${esc(user.email)}</span><button class="btn ghost sm" onclick="logout()">Salir</button>`:'';
+ const a=$('#app');
+ a.innerHTML=!user?authView():({home:homeView,analyze:analyzeView,create:createView})[view]();
+ if(user&&view==='home')loadSaved()}
+function go(v){view=v;if(v==='create'){cv=blank();step=0}analysisHTML='';render();scrollTo(0,0)}
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2500)}
+
+/* ---------- Login / registro ---------- */
+function authView(){return `<section class="auth"><h1>Tu CV, listo para pasar el filtro.</h1>
+<p class="lead">Analizá tu CV con los criterios de los sistemas ATS o armá uno nuevo respondiendo unas preguntas.</p>
+<div class="card"><div class="tabs"><button class="${mode==='in'?'on':''}" onclick="mode='in';msg='';render()">Ingresar</button><button class="${mode==='up'?'on':''}" onclick="mode='up';msg='';render()">Registrarme</button></div>
+<button class="btn white" onclick="google()" ${sb?'':'disabled title="Disponible al conectar Supabase"'}>Continuar con Google</button>
+<p class="or">o con tu mail</p>
+<label>Email<input id="em" type="email" autocomplete="email"></label>
+<label>Contraseña<input id="pw" type="password" placeholder="Mínimo 6 caracteres" autocomplete="${mode==='in'?'current-password':'new-password'}"></label>
+<button class="btn" onclick="submitAuth()">${mode==='in'?'Ingresar':'Crear cuenta'}</button>
+<p class="msg" id="msg">${esc(msg)}</p>
+${sb?'':'<button class="btn ghost" onclick="demo()">Probar en modo demo (sin base de datos)</button>'}</div></section>`}
+const setMsg=t=>{const m=$('#msg');if(m)m.textContent=t};
+async function submitAuth(){
+ const email=$('#em').value.trim(),password=$('#pw').value;
+ if(!email.includes('@')||password.length<6)return setMsg('Ingresá un mail válido y una contraseña de al menos 6 caracteres.');
+ if(!sb)return setMsg('Conectá Supabase o usá el modo demo.');
+ const r=mode==='in'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});
+ if(r.error)return setMsg(r.error.message);
+ if(mode==='up'&&!r.data.session)setMsg('Cuenta creada. Revisá tu mail para confirmarla y después ingresá.')}
+const google=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+function demo(){user={email:'demo@local'};localStorage.setItem('demo_user','1');render()}
+async function logout(){if(sb)await sb.auth.signOut();localStorage.removeItem('demo_user');user=null;view='home';render()}
+
+/* ---------- Inicio ---------- */
+function homeView(){return `<h1>¿Qué querés hacer hoy?</h1><div class="grid2">
+<button class="tile" onclick="go('analyze')"><h2>Analizar mi CV</h2><p>Subí tu archivo (PDF, Word o TXT) y mirá qué tan probable es que pase los filtros ATS, qué sacar y qué agregar.</p></button>
+<button class="tile" onclick="go('create')"><h2>Crear un CV</h2><p>Respondé unas preguntas y descargá un CV prolijo en PDF o Word, con formato compatible con ATS.</p></button></div>
+<details class="card"><summary><b>Guía rápida para postularte en Argentina</b></summary><ul>
+<li>Adaptá el CV a cada aviso: llevá a tu experiencia y habilidades las palabras clave reales de la oferta (herramientas, tareas, requisitos). No hace falta cumplir el 100%: con cubrir cerca del 60% de los requisitos ya aparecés en el radar.</li>
+<li>Un solo formato de una columna, sin tablas, íconos ni imágenes. Guardalo como PDF con texto seleccionable o como Word.</li>
+<li>Computrabajo es el portal con más avisos. Bumeran y ZonaJobs son del mismo grupo y comparten gran parte de sus publicaciones, así que revisá antes de postularte dos veces al mismo aviso.</li>
+<li>LinkedIn sirve para que te encuentren: mantené el perfil completo y coherente con tu CV.</li>
+<li>Los referidos pesan: según Randstad 2026, el 26% de quienes consiguieron trabajo lo hizo por esa vía. Contale a tus contactos qué buscás.</li>
+<li>Postulate temprano y con calidad: mejor pocas postulaciones adaptadas que muchas iguales.</li>
+<li>Desconfiá de cualquier aviso que pida plata o datos sensibles para postularte.</li></ul></details>
+<h2 class="sec">Mis CVs guardados</h2><div id="saved"><p class="muted">Cargando…</p></div>`}
+async function loadSaved(){
+ const l=await store.list(),el=$('#saved');if(!el)return;savedCache=l;
+ el.innerHTML=l.length?l.map(r=>`<div class="row"><div><b>${esc(r.title)}</b><small>${new Date(r.created_at).toLocaleDateString('es-AR')}</small></div><div><button class="btn sm" onclick="dl('pdf','${r.id}')">PDF</button><button class="btn sm" onclick="dl('docx','${r.id}')">Word</button><button class="btn sm ghost" onclick="delSaved('${r.id}')">Borrar</button></div></div>`).join(''):'<p class="muted">Todavía no guardaste ningún CV. Creá el primero.</p>'}
+async function delSaved(id){await store.del(id);loadSaved()}
+
+/* ---------- Analizador ---------- */
+function analyzeView(){return `<button class="back" onclick="go('home')">← Volver</button><h1>Analizar CV</h1>
+<div class="card"><label class="drop"><input type="file" id="file" accept=".pdf,.docx,.txt" onchange="$('#fname').textContent=this.files[0]?.name||''" hidden><b>Elegí tu CV</b><span id="fname">PDF, Word (.docx) o TXT</span></label>
+<label>Oferta laboral (opcional)<small>Pegá el aviso al que te querés postular y medimos cuántas de sus palabras clave aparecen en tu CV.</small><textarea id="job" rows="5"></textarea></label>
+<button class="btn" id="run" onclick="runAnalysis()">Analizar</button></div><div id="result">${analysisHTML}</div>`}
+async function readFile(f){
+ const ext=f.name.split('.').pop().toLowerCase();
+ if(ext==='pdf'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;let text='';
+  for(let i=1;i<=pdf.numPages;i++){const c=await(await pdf.getPage(i)).getTextContent();text+=c.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n'}
+  return{text,pages:pdf.numPages}}
+ if(ext==='docx')return{text:(await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value,pages:0};
+ return{text:await f.text(),pages:0}}
+async function runAnalysis(){
+ const f=$('#file').files[0];if(!f)return $('#result').innerHTML='<p class="err">Primero elegí un archivo.</p>';
+ const b=$('#run');b.disabled=true;b.textContent='Analizando…';
+ try{const{text,pages}=await readFile(f);analysisHTML=report(analyze(text,pages,$('#job').value));$('#result').innerHTML=analysisHTML}
+ catch(e){$('#result').innerHTML='<p class="err">No pude leer el archivo. Probá con otro PDF o Word.</p>'}
+ b.disabled=false;b.textContent='Analizar'}
+
+function analyze(text,pages,job){
+ const low=text.toLowerCase(),words=(text.match(/\S+/g)||[]).length,C=[],rm=[],ad=[];
+ const add=(w,s,t,tip='')=>C.push({w,s,t,tip});
+ words<80?add(4,'bad','No se pudo leer texto','Parece un PDF escaneado o hecho con imágenes: un ATS no lo lee. Exportalo como PDF de texto desde Word o Google Docs.'):add(4,'ok','El texto se lee correctamente');
+ if(/[\w.+-]+@[\w-]+\.[\w.]+/.test(text))add(2,'ok','Incluye email');else{add(2,'bad','Falta el email','Agregá un email profesional (nombre.apellido@...).');ad.push('Email de contacto')}
+ if(/\+?\d[\d\s().-]{7,}\d/.test(text))add(2,'ok','Incluye teléfono');else{add(2,'bad','Falta el teléfono','Agregá un celular con código de área, de preferencia con WhatsApp.');ad.push('Teléfono / WhatsApp')}
+ if(/linkedin\.com/.test(low))add(1,'ok','Incluye LinkedIn');else{add(1,'warn','No aparece tu LinkedIn','LinkedIn es la principal vidriera de los reclutadores en Argentina. Sumá la URL de tu perfil y mantenelo coherente con el CV.');ad.push('Link a LinkedIn')}
+ [['Experiencia laboral',/experiencia|trayectoria|experience|antecedentes laborales/,3],['Educación',/educaci[oó]n|formaci[oó]n|estudios|education/,2],['Habilidades',/habilidades|skills|competencias|conocimientos|herramientas/,2],['Perfil profesional',/perfil|resumen|summary|sobre m[ií]|objetivo/,1],['Idiomas',/idiomas|languages|ingl[eé]s/,1]].forEach(([n,re,w])=>{
+  if(re.test(low))add(w,'ok',`Sección «${n}» presente`);else{add(w,w>1?'bad':'warn',`Falta la sección «${n}»`,`Usá un título estándar: «${n}». Los ATS buscan estos encabezados para clasificar tu información.`);ad.push('Sección '+n)}});
+ const yrs=(text.match(/\b(19|20)\d{2}\b/g)||[]).length;
+ yrs>=4?add(2,'ok','Incluye fechas en la experiencia'):add(2,'warn','Pocas fechas','Indicá mes/año de inicio y fin en cada trabajo y estudio. Usá «Actualidad» para el actual.');
+ if(words>=250&&words<=900&&pages<=2)add(2,'ok','Extensión adecuada');else add(2,'warn',words<250?'CV muy corto':'CV demasiado largo',words<250?'Desarrollá tus logros: apuntá a 300–700 palabras.':'Ideal: 1 página (hasta 2 con mucha trayectoria). Sacá lo que tenga más de 10–15 años o no aporte al puesto.');
+ const nums=(text.match(/\d+\s?%|\$\s?\d|\b\d+\s?(clientes|personas|equipo|ventas|proyectos|usuarios|mil|k)\b/gi)||[]).length;
+ nums>=3?add(3,'ok','Logros con números'):add(3,nums?'warn':'bad','Faltan logros medibles','Sumá cifras: porcentajes, montos, cantidad de clientes o personas a cargo. Es lo que más destaca ante un reclutador.');
+ const vb=(low.match(/\b(gestion[eé]|lider[eé]|desarroll[eé]|implement[eé]|coordin[eé]|logr[eé]|aument[eé]|redu[jc]e|dise[ñn][eé]|administr[eé]|cre[eé]|optimic[eé]|atend[ií]|negoci[eé]|organic[eé]|analic[eé]|led|managed|developed|implemented|increased)\b/g)||[]).length;
+ vb>=4?add(2,'ok','Usa verbos de acción'):add(2,vb>=2?'warn':'bad','Pocos verbos de acción','Empezá cada logro con un verbo en pasado: gestioné, lideré, implementé, reduje…');
+ const sens=[[/\bdni\b|d\.n\.i|documento (de identidad|n)/,'DNI'],[/estado civil|soltero|casado|divorciad/,'Estado civil'],[/fecha de nacimiento|nacid[oa] el|\bedad\b|\b\d{2} a[ñn]os\b/,'Edad o fecha de nacimiento'],[/\bcuil\b|\bcuit\b/,'CUIL / CUIT'],[/nacionalidad|religi[oó]n|\bhijos\b/,'Nacionalidad, religión o hijos'],[/\bfoto\b/,'Foto']].filter(([r])=>r.test(low)).map(x=>x[1]);
+ if(sens.length){add(2,'bad','Datos personales innecesarios: '+sens.join(', '),'No suman y pueden generar sesgos. Sacalos; si la empresa los necesita, los pide después.');rm.push(...sens)}else add(2,'ok','Sin datos personales sensibles');
+ if(/\b(calle|av\.?|avenida)\s+\w+.*\d{2,5}|\bpiso\b|\bdepto\b/.test(low)){add(1,'warn','Dirección completa','Alcanza con localidad y provincia, que los ATS usan para filtrar por ubicación. La norma de Currículum Equitativo de CABA excluye dirección, barrio, estado civil e hijos.');rm.push('Dirección completa')}
+ const fl=[[/referencias? a disposici[oó]n|references available/,'«Referencias a disposición»'],[/curr[ií]culum vitae/,'Título «Curriculum Vitae»'],[/pretensi[oó]n salarial|remuneraci[oó]n pretendida|sueldo pretendido/,'Pretensión salarial (ponela solo si la piden)'],[/proactiv[oa]|din[aá]mic[oa]|buena predisposici[oó]n|orientad[oa] a resultados/,'Frases vacías (proactivo, dinámico…)']].filter(([r])=>r.test(low)).map(x=>x[1]);
+ if(fl.length){add(1,'warn','Contenido que sobra: '+fl.join('; '),'Ocupa espacio sin aportar. Reemplazalo por logros concretos.');rm.push(...fl)}
+ if(/[★☆✔✆✉☎►■◆❖✓]/.test(text)){add(1,'warn','Íconos o símbolos especiales','Muchos ATS no los interpretan. Usá texto simple y viñetas comunes.');rm.push('Íconos y símbolos')}
+ if(job.trim().length>40){
+  const sw=new Set('para con una uno los las del por que como más mas sus son este esta entre sobre desde hasta también experiencia buscamos busca empresa trabajo puesto ser tener años será serán cada otros otras and the for with you our are will'.split(' '));
+  const swn=new Set([...sw].map(norm)),nl=norm(low),f={};
+  (norm(job.toLowerCase()).match(/[a-z]{4,}/g)||[]).forEach(w=>{if(!swn.has(w))f[w]=(f[w]||0)+1});
+  const top=Object.entries(f).sort((a,b)=>b[1]-a[1]).slice(0,25).map(x=>x[0]),miss=top.filter(k=>!(nl.includes(k)||nl.includes(k.slice(0,Math.max(5,k.length-2))))),pct=Math.round(100*(top.length-miss.length)/Math.max(top.length,1));
+  add(3,pct>=60?'ok':pct>=35?'warn':'bad',`Coincidencia con la oferta: ${pct}%`,miss.length?`No aparecen estas palabras clave de la oferta: ${miss.slice(0,12).join(', ')}. Incluí solo las que reflejen tu experiencia real, y escribí la sigla y el nombre completo (ej: Search Engine Optimization (SEO)), porque muchos ATS buscan coincidencia exacta.`:'');
+  if(miss.length)ad.push('Palabras clave: '+miss.slice(0,8).join(', '))}
+ const tot=C.reduce((a,c)=>a+c.w,0),got=C.reduce((a,c)=>a+c.w*(c.s==='ok'?1:c.s==='warn'?.5:0),0);
+ return{score:Math.round(100*got/tot),checks:C,rm,ad,words}}
+function report(r){
+ const lab=r.score>=80?['Alta','ok']:r.score>=60?['Media','warn']:['Baja','bad'];
+ const li=a=>a.length?'<ul>'+a.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'<p class="muted">Nada para señalar.</p>';
+ const tips=r.checks.filter(c=>c.s!=='ok');
+ return `<div class="card score"><div class="ring ${lab[1]}" style="--p:${r.score}"><b>${r.score}</b><small>de 100</small></div><div><h2>Probabilidad de pasar el filtro: ${lab[0]}</h2><p class="muted">Estimación basada en criterios habituales de los ATS (${r.words} palabras analizadas). Muchos ATS ordenan y filtran por palabras clave, y después una persona revisa a los mejor posicionados. Es una guía, no una garantía.</p></div></div>
+<div class="grid2"><div class="card"><h3>Qué sacar</h3>${li(r.rm)}</div><div class="card"><h3>Qué agregar</h3>${li(r.ad)}</div></div>
+<div class="card"><h3>Qué mejorar</h3>${tips.length?tips.map(c=>`<div class="chk ${c.s}"><b>${esc(c.t)}</b><p>${esc(c.tip)}</p></div>`).join(''):'<p class="muted">No hay nada urgente.</p>'}</div>
+<div class="card"><h3>Lo que ya está bien</h3><ul>${r.checks.filter(c=>c.s==='ok').map(c=>`<li>${esc(c.t)}</li>`).join('')}</ul></div>`}
+
+/* ---------- Creador de CV ---------- */
+const STEPS=['Datos','Perfil','Experiencia','Educación','Habilidades','Listo'];
+const set=(k,v)=>cv[k]=v,setA=(k,i,f,v)=>cv[k][i][f]=v;
+const hint=h=>h?`<small>${h}</small>`:'';
+const F=(l,k,p='',h='')=>`<label>${l}${hint(h)}<input value="${esc(cv[k])}" placeholder="${esc(p)}" oninput="set('${k}',this.value)"></label>`;
+const T=(l,k,p='',h='',r=4)=>`<label>${l}${hint(h)}<textarea rows="${r}" placeholder="${esc(p)}" oninput="set('${k}',this.value)">${esc(cv[k])}</textarea></label>`;
+const FA=(k,i,f,l,p='')=>`<label>${l}<input value="${esc(cv[k][i][f])}" placeholder="${esc(p)}" oninput="setA('${k}',${i},'${f}',this.value)"></label>`;
+const TA=(k,i,f,l,p,h)=>`<label>${l}${hint(h)}<textarea rows="5" placeholder="${esc(p)}" oninput="setA('${k}',${i},'${f}',this.value)">${esc(cv[k][i][f])}</textarea></label>`;
+function addItem(k){cv[k].push(k==='exp'?{role:'',company:'',from:'',to:'',desc:''}:{title:'',inst:'',from:'',to:''});render()}
+function delItem(k,i){cv[k].splice(i,1);if(!cv[k].length)cv[k].push(k==='exp'?{role:'',company:'',from:'',to:'',desc:''}:{title:'',inst:'',from:'',to:''});render()}
+function nav(d){step+=d;render();scrollTo(0,0)}
+function createView(){return `<button class="back" onclick="go('home')">← Volver</button><h1>Crear CV</h1>
+<div class="steps">${STEPS.map((s,i)=>`<span class="${i===step?'on':i<step?'done':''}">${s}</span>`).join('')}</div>
+<div class="card">${stepBody()}</div>
+<div class="nav">${step>0?'<button class="btn ghost" onclick="nav(-1)">Atrás</button>':'<span></span>'}${step<5?'<button class="btn" onclick="nav(1)">Siguiente</button>':''}</div>`}
+function stepBody(){
+ if(step===0)return `<p class="tip">Poné ciudad y provincia, no la dirección completa. No incluyas DNI, edad, estado civil ni hijos. La foto es opcional en Argentina y el ATS no la lee: para portales conviene omitirla.</p>
+ ${F('Nombre y apellido','name','Ej: Lucía Fernández')}${F('Puesto al que apuntás','title','Ej: Analista de Marketing Digital','Un título claro y estándar, el mismo que usan las ofertas.')}
+ ${F('Email','email','nombre.apellido@gmail.com')}${F('Teléfono / WhatsApp','phone','+54 9 11 1234-5678')}${F('Ciudad y provincia','city','Rosario, Santa Fe')}
+ ${F('LinkedIn','linkedin','linkedin.com/in/tu-usuario')}${F('Portfolio o web (opcional)','web','')}`;
+ if(step===1)return T('Perfil profesional','summary','Analista administrativa con 5 años de experiencia en facturación y tesorería. Busco sumarme a un equipo contable en CABA.','De 3 a 4 líneas: quién sos, cuántos años de experiencia tenés, tus logros clave y qué buscás. Usá palabras de la oferta a la que te postulás.',5);
+ if(step===2)return `<p class="tip">Del trabajo más reciente al más antiguo. Un logro por línea, empezando con un verbo (gestioné, lideré, reduje) y con números: %, cantidades, plazos.</p>`+cv.exp.map((e,i)=>`<div class="item">${FA('exp',i,'role','Puesto','Ej: Analista administrativo')}${FA('exp',i,'company','Empresa','Ej: Distribuidora Norte S.A.')}${FA('exp',i,'from','Desde','03/2021')}${FA('exp',i,'to','Hasta','Actualidad')}${TA('exp',i,'desc','Logros y tareas','Reduje 30% los errores de facturación con un nuevo control\nGestioné la cobranza de 120 clientes','Una línea por logro')}<button class="btn ghost sm" onclick="delItem('exp',${i})">Quitar</button></div>`).join('')+`<button class="btn ghost" onclick="addItem('exp')">+ Agregar otra experiencia</button>`;
+ if(step===3)return cv.edu.map((e,i)=>`<div class="item">${FA('edu',i,'title','Título o carrera','Ej: Licenciatura en Administración')}${FA('edu',i,'inst','Institución','Ej: Universidad de Buenos Aires')}${FA('edu',i,'from','Desde','2015')}${FA('edu',i,'to','Hasta (o «En curso»)','2020')}<button class="btn ghost sm" onclick="delItem('edu',${i})">Quitar</button></div>`).join('')+`<button class="btn ghost" onclick="addItem('edu')">+ Agregar otra formación</button>`;
+ if(step===4)return F('Habilidades','skills','Excel avanzado, SAP, Power BI, atención al cliente','Separadas por coma. Usá los nombres exactos de herramientas que piden las ofertas.')+F('Idiomas','langs','Inglés intermedio (B2), Portugués básico','Indicá el nivel.')+T('Cursos y certificaciones (opcional)','extra','Curso de Excel Avanzado - Coderhouse, 2023','Uno por línea, con institución y año.',4);
+ const r=analyze(cvText(cv),1,''),tips=r.checks.filter(c=>c.s!=='ok').slice(0,4);
+ return `<h2>Tu CV está listo</h2><p class="muted">Puntaje ATS estimado: <b style="color:var(--o)">${r.score}/100</b>${tips.length?'. Para mejorarlo:':''}</p>${tips.map(c=>`<div class="chk ${c.s}"><b>${esc(c.t)}</b><p>${esc(c.tip)}</p></div>`).join('')}${preview(cv)}
+ <div class="acts"><button class="btn" onclick="dl('pdf')">Descargar PDF</button><button class="btn" onclick="dl('docx')">Descargar Word</button><button class="btn ghost" onclick="saveCV()">Guardar en mi cuenta</button></div>`}
+
+/* ---------- Modelo del CV (compartido por vista previa, PDF y Word) ---------- */
+const lines=s=>(s||'').split('\n').map(x=>x.replace(/^[\s•\-*]+/,'').trim()).filter(Boolean);
+const contact=c=>[c.email,c.phone,c.city,c.linkedin,c.web].filter(Boolean).join(' | ');
+function model(c){const S=[],j=(...a)=>a.filter(Boolean).join(' | '),d=(a,b)=>[a,b].filter(Boolean).join(' - ');
+ if(c.summary.trim())S.push({h:'Perfil profesional',p:[c.summary.trim()]});
+ const ex=c.exp.filter(e=>e.role||e.company);if(ex.length)S.push({h:'Experiencia laboral',i:ex.map(e=>({t:j(e.role,e.company),s:d(e.from,e.to),b:lines(e.desc)}))});
+ const ed=c.edu.filter(e=>e.title||e.inst);if(ed.length)S.push({h:'Educación',i:ed.map(e=>({t:j(e.title,e.inst),s:d(e.from,e.to),b:[]}))});
+ if(c.skills.trim())S.push({h:'Habilidades',p:[c.skills.trim()]});
+ if(c.langs.trim())S.push({h:'Idiomas',p:[c.langs.trim()]});
+ if(c.extra.trim())S.push({h:'Cursos y certificaciones',p:lines(c.extra)});
+ return S}
+const cvText=c=>[c.name,c.title,contact(c),...model(c).flatMap(s=>[s.h,...(s.p||[]),...(s.i||[]).flatMap(i=>[i.t,i.s,...i.b])])].join('\n');
+function preview(c){return `<div class="paper"><h2>${esc(c.name||'Tu nombre')}</h2><p class="pt">${esc(c.title)}</p><p class="pc">${esc(contact(c))}</p>${model(c).map(s=>`<h4>${esc(s.h)}</h4>`+(s.p||[]).map(x=>`<p>${esc(x)}</p>`).join('')+(s.i||[]).map(i=>`<div class="it"><b>${esc(i.t)}</b><span>${esc(i.s)}</span></div>${i.b.length?'<ul>'+i.b.map(b=>`<li>${esc(b)}</li>`).join('')+'</ul>':''}`).join('')).join('')}</div>`}
+
+/* ---------- Exportar PDF (texto real, legible por ATS) ---------- */
+function makePDF(c){
+ const{jsPDF}=window.jspdf,d=new jsPDF({unit:'mm',format:'a4'}),M=18,W=174;let y=M;
+ const w=(t,sz,b,gap=0,x=M,wd=W)=>{d.setFont('helvetica',b?'bold':'normal');d.setFontSize(sz);d.splitTextToSize(t,wd).forEach(l=>{if(y>282){d.addPage();y=M}d.text(l,x,y);y+=sz*.42});y+=gap};
+ w(c.name||'',20,1,1);if(c.title)w(c.title,12,0,1);w(contact(c),9,0,3);
+ model(c).forEach(s=>{y+=3;w(s.h,11,1,0);d.setDrawColor(255,106,0);d.setLineWidth(.5);d.line(M,y-2,M+W,y-2);y+=1.5;
+  (s.p||[]).forEach(p=>w(p,10,0,1.5));
+  (s.i||[]).forEach(i=>{w(i.t,10.5,1,0);if(i.s)w(i.s,9,0,.5);i.b.forEach(b=>w('• '+b,10,0,.5,M+2,W-2));y+=2})});
+ return d}
+/* ---------- Exportar Word ---------- */
+function makeDOCX(c){
+ const D=docx,P=(t,o={})=>new D.Paragraph({spacing:{after:o.after??60},children:[new D.TextRun({text:t,bold:!!o.b,size:o.sz||21})]});
+ const ch=[P(c.name||'',{b:1,sz:40}),...(c.title?[P(c.title,{sz:24})]:[]),P(contact(c),{sz:18,after:200})];
+ model(c).forEach(s=>{
+  ch.push(new D.Paragraph({spacing:{before:200,after:80},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:'FF6A00',space:1}},children:[new D.TextRun({text:s.h,bold:true,size:24})]}));
+  (s.p||[]).forEach(p=>ch.push(P(p)));
+  (s.i||[]).forEach(i=>{ch.push(P(i.t,{b:1,after:0}));if(i.s)ch.push(P(i.s,{sz:18,after:20}));i.b.forEach(b=>ch.push(new D.Paragraph({bullet:{level:0},children:[new D.TextRun({text:b,size:21})]})))})});
+ return D.Packer.toBlob(new D.Document({sections:[{children:ch}]}))}
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+async function dl(kind,id){
+ try{const c=id?savedCache.find(r=>String(r.id)===String(id)).data:cv,n='CV-'+(c.name||'sin-nombre').trim().replace(/\s+/g,'-');
+  kind==='pdf'?makePDF(c).save(n+'.pdf'):saveBlob(await makeDOCX(c),n+'.docx')}
+ catch(e){toast('No se pudo generar el archivo')}}
+async function saveCV(){await store.save(cv);toast('CV guardado en tu cuenta')}
+init();
+</script>
+</body>
+</html>
